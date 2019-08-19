@@ -1,0 +1,25 @@
+{
+    "name": "Note Tab",
+    "version": "2.0.0",
+    "manifest_version": 2,
+    "chrome_url_overrides": {
+        "newtab": "index.html"
+    },
+    "description": "Cross browser extension for quick notes and calculations in the new tab.",
+    "permissions": [
+        "storage"
+    ],
+    "background": {
+        "scripts": [
+            "static/app.background.js"
+        ]
+    },
+    "browser_action": {
+        "default_icon": "static/icons/icon-16.png"
+    },
+    "icons": {
+        "16": "static/icons/icon-16.png",
+        "48": "static/icons/icon-48.png",
+        "128": "static/icons/icon-128.png"
+    }
+}
