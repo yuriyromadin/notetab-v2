@@ -13,8 +13,9 @@ body{
   box-sizing: border-box;
 }
 .calculator{
-  max-width: 940px;
+  max-width: 400px;
   margin: 0 auto;
+  box-shadow: 0 0 1rem 0 rgba(0,0,0,.05);
 }
 .calculator > div{
   position: relative;
@@ -48,6 +49,10 @@ body{
   min-height: calc(.875rem * 1.8);
 }
 
+.calculator .input > div.completed{
+  text-decoration: line-through;
+}
+
 .calculator .output{
   padding: .5rem;
   text-align: right;
@@ -78,7 +83,12 @@ body{
   visibility: hidden;
 }
 
-.calculator .output .result:hover{
+.calculator .output .result:not(.boom):hover{
   background: #dc7459;
   color: #fff;
 }
+
+/* .calculator .output .result.boom{ */
+  /* background: transparent; */
+  /* transition: all 2s; */
+/* } */

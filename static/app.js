@@ -53,107 +53,155 @@ class Observable {
 class Calc extends Observable {
 
     constructor(settings) {
-        super()
-        this.defaults = {
-            scope: '.calculator',
-            input: '.input',
-            output: '.output',
-            data: '',
-            inputDelay: 100,
-        };
+      super()
+      this.defaults = {
+        scope: '.calculator',
+        input: '.input',
+        output: '.output',
+        data: '',
+        inputDelay: 100,
+      };
 
-        this.settings = Object.assign({}, this.defaults, settings);
-        this.scope = document.querySelector(this.settings.scope);
-        this.input = this.scope.querySelector(this.settings.input);
-        this.output = this.scope.querySelector(this.settings.output);
-        this.parser = math.parser();
-        this.timeoutId = '';
-        this.initializeEvents();
-        this.calculate();
+      this.settings = Object.assign({}, this.defaults, settings);
+      this.scope = document.querySelector(this.settings.scope);
+      this.input = this.scope.querySelector(this.settings.input);
+      this.output = this.scope.querySelector(this.settings.output);
+      this.parser = math.parser();
+      this.timeoutId = '';
+      this.initializeEvents();
+      this.calculate();
     }
 
     initializeEvents() {
-        this.input.addEventListener('input', this.onInput.bind(this));
-        this.input.addEventListener('paste', this.onPaste.bind(this));
-        this.output.addEventListener('click', this.onOutputClick);
+      this.input.addEventListener('input', this.onInput.bind(this));
+      this.input.addEventListener('keydown', this.onKeyDown.bind(this));
+      this.input.addEventListener('paste', this.onPaste.bind(this));
+      this.output.addEventListener('click', this.onOutputClick);
     }
 
     calculate() {
-        let lines = this.input.children,
-            html = '';
+      let lines = this.input.children,
+          html = '';
 
-        if (!~this.input.innerHTML.indexOf('div')) {
-            this.input.innerHTML = '<div></div>';
+      if (!~this.input.innerHTML.indexOf('div')) {
+        this.input.innerHTML = '<div></div>';
+      }
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i],
+            expression = line.textContent.replace(/^\s+|\s+$/g, ''),
+            out = document.createElement('div'),
+            outInner = document.createElement('span'),
+            className = 'result', result;
+
+        try {
+            result = this.parser.eval(expression);
+        } catch (e) { /* console.log(e) */ }
+
+        if (!result) {
+            result = '';
+            className += ' empty';
+        } else {
+            this.parser.scope.prev = result;
         }
 
-        for (let i = 0; i < lines.length; i++) {
-            let line = lines[i],
-                expression = line.textContent.replace(/^\s+|\s+$/g, ''),
-                out = document.createElement('div'),
-                outInner = document.createElement('span'),
-                className = 'result', result;
+        result = result.toString();
 
-            try {
-                result = this.parser.eval(expression);
-            } catch (e) { console.log(e) }
+        html += `
+          <div style="top: ${line.offsetTop}px">
+            <span class="${className}" title="${result}">${result}</span>
+          </div>
+        `;
+      }
 
-            if (!result) {
-                result = '';
-                className += ' empty';
-            } else {
-                this.parser.scope.prev = result;
-            }
+      this.output.innerHTML = html;
+      this.parser.clear();
+      this.onChange();
+    }
 
-            result = result.toString();
+    onKeyDown(e) {
+      if (e.which === 173 && e.ctrlKey){
+        e.preventDefault();
+        e.stopPropagation();
 
-            html += `
-        <div style="top: ${line.offsetTop}px">
-          <span class="${className}" title="${result}">${result}</span>
-        </div>
-      `;
-        }
+        let line = window.getSelection().focusNode.parentElement;
 
-        this.output.innerHTML = html;
-        this.parser.clear();
-        this.onChange();
+        line.classList.toggle('completed');
+      }
     }
 
     onInput() {
-        window.clearTimeout(this.timeoutId);
-        this.timeoutId = setTimeout(this.calculate.bind(this), this.settings.inputDelay);
+      window.clearTimeout(this.timeoutId);
+      this.timeoutId = setTimeout(this.calculate.bind(this), this.settings.inputDelay);
     }
 
     onChange() {
-        this.settings.data = this.input.innerText;
-        this.dispatch('change', this.settings.data);
+      let data = [];
+
+      for (let child of this.input.children) {
+        data.push({
+          content: child.innerText,
+          className: child.className
+        })
+      }
+
+      this.settings.data = JSON.stringify(data);
+      this.dispatch('change', this.settings.data);
     }
 
     onPaste(e) {
-        e.preventDefault();
-        document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+      e.preventDefault();
+      document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
     }
 
     onOutputClick(e) {
-        if (!e.target.classList.contains('result')) {
-            return;
-        }
+      if (!e.target.classList.contains('result')) {
+        return;
+      }
 
-        const selection = window.getSelection(),
+      const target = e.target,
+            selection = window.getSelection(),
             range = document.createRange();
 
-        range.selectNodeContents(e.target);
-        selection.removeAllRanges();
-        selection.addRange(range);
-        document.execCommand('copy');
-        selection.removeAllRanges();
+
+      target.classList.add('boom');
+      setTimeout(() => {
+        target.classList.remove('boom');
+      }, 200);
+
+      range.selectNodeContents(target);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.execCommand('copy');
+      selection.removeAllRanges();
     }
 }
 
 
-let calc = new Calc({
-    data: []
-});
+let storage = new LocalStorage();
+let settings = {
+  input: ''
+};
+let calc;
+let template = document.querySelector('#calculatorLinesView').innerHTML;
 
-calc.on('change', function (a) {
-    console.log(a)
+storage.get(function(data){
+  Object.assign(settings, data);
+
+
+  document.querySelector('#app').innerHTML = Mustache.render(template, {
+    lines: JSON.parse(settings.input), //.trim().split('\n'),
+    className: 'lol'
+  });
+
+  calc = new Calc({
+    data: settings.input
+  });
+
+  calc.on('change', data => {
+    settings.input = data;
+
+    storage.set(settings);
+  });
+
 });
