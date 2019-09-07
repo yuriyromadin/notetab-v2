@@ -66,6 +66,10 @@ class Calc extends Observable {
       this.scope = document.querySelector(this.settings.scope);
       this.input = this.scope.querySelector(this.settings.input);
       this.output = this.scope.querySelector(this.settings.output);
+      math.config({
+        number: 'BigNumber',
+        precision: 64
+      });
       this.parser = math.parser();
       this.timeoutId = '';
       this.initializeEvents();
@@ -190,8 +194,7 @@ storage.get(function(data){
 
 
   document.querySelector('#app').innerHTML = Mustache.render(template, {
-    lines: JSON.parse(settings.input), //.trim().split('\n'),
-    className: 'lol'
+    lines: JSON.parse(settings.input)
   });
 
   calc = new Calc({
