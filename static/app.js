@@ -78,7 +78,6 @@ class Calc extends Observable {
 
     initializeEvents() {
       this.input.addEventListener('input', this.onInput.bind(this));
-      this.input.addEventListener('keydown', this.onKeyDown.bind(this));
       this.input.addEventListener('paste', this.onPaste.bind(this));
       this.output.addEventListener('click', this.onOutputClick);
     }
@@ -123,17 +122,6 @@ class Calc extends Observable {
       this.onChange();
     }
 
-    onKeyDown(e) {
-      if (e.which === 173 && e.ctrlKey){
-        e.preventDefault();
-        e.stopPropagation();
-
-        let line = window.getSelection().focusNode.parentElement;
-
-        line.classList.toggle('completed');
-      }
-    }
-
     onInput() {
       window.clearTimeout(this.timeoutId);
       this.timeoutId = setTimeout(this.calculate.bind(this), this.settings.inputDelay);
@@ -143,10 +131,7 @@ class Calc extends Observable {
       let data = [];
 
       for (let child of this.input.children) {
-        data.push({
-          content: child.innerText,
-          className: child.className
-        })
+        data.push(child.innerText);
       }
 
       this.settings.data = JSON.stringify(data);
@@ -181,30 +166,31 @@ class Calc extends Observable {
     }
 }
 
+(function () {
+  let storage = new LocalStorage();
+  let settings = {
+    input: '{}'
+  };
+  let calc;
+  let template = document.querySelector('#calculatorLinesView').innerHTML;
 
-let storage = new LocalStorage();
-let settings = {
-  input: ''
-};
-let calc;
-let template = document.querySelector('#calculatorLinesView').innerHTML;
+  storage.get(function(data){
+    Object.assign(settings, data);
 
-storage.get(function(data){
-  Object.assign(settings, data);
+    document.querySelector('#app').innerHTML = Mustache.render(template, {
+      lines: JSON.parse(settings.input)
+    });
 
+    calc = new Calc({
+      data: settings.input
+    });
 
-  document.querySelector('#app').innerHTML = Mustache.render(template, {
-    lines: JSON.parse(settings.input)
+    calc.on('change', data => {
+      settings.input = data;
+
+      storage.set(settings);
+    });
+
   });
 
-  calc = new Calc({
-    data: settings.input
-  });
-
-  calc.on('change', data => {
-    settings.input = data;
-
-    storage.set(settings);
-  });
-
-});
+})();

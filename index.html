@@ -16,7 +16,7 @@
       <div id="calculator">
         <div class="input" contenteditable="true">
           {{ #lines }}
-          <div class="{{ className }}">{{ content }}</div>
+          <div>{{ . }}</div>
           {{ /lines }}
         </div>
         <div class="output"></div>
